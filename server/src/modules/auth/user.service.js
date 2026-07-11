@@ -27,7 +27,6 @@ export const registrationService = async (userInfo) => {
   });
 
   const { passwordHash, ...others } = user;
-  console.log("others: ", others);
 
   return others;
 };

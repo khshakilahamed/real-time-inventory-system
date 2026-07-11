@@ -31,6 +31,11 @@ export const UserModel = sequelize.define(
       allowNull: false,
       field: "password_hash",
     },
+    role: {
+      type: DataTypes.ENUM("admin", "user"),
+      allowNull: false,
+      defaultValue: "user",
+    },
   },
   {
     tableName: "users",

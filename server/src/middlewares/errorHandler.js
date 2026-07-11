@@ -8,9 +8,14 @@ export default (err, req, res, next) => {
   let statusCode = 500;
   let message = "Internal server error";
 
+  //   console.log("err: ", err)
+
   if (err.name === "SequelizeUniqueConstraintError") {
     statusCode = httpStatus.CONFLICT;
     message = "Username or email already taken";
+  } else if (err.name === "SequelizeUniqueConstraintError") {
+    statusCode = httpStatus.CONFLICT;
+    message = "Already reserved";
   } else if (err instanceof ZodError) {
     const simplifiedError = handleZodError(err);
     statusCode = simplifiedError.statusCode;

@@ -4,6 +4,7 @@ import { createDropSchema } from "./drops.validate.js";
 import {
   createNewMerchDropController,
   getDropsController,
+  reservationController,
 } from "./drops.controller.js";
 import authenticate from "../../middlewares/authenticate.js";
 import requireAdmin from "../../middlewares/requireAdmin.js";
@@ -19,5 +20,6 @@ dropsRouter.post(
 );
 
 dropsRouter.get("/", getDropsController);
+dropsRouter.post("/:dropId/reserve", authenticate, reservationController);
 
 export default dropsRouter;

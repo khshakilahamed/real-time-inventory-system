@@ -29,9 +29,10 @@ export const ReservationModel = sequelize.define(
       defaultValue: "pending",
       validate: { isIn: [["pending", "completed", "expired"]] },
     },
-    expires_at: {
+    expiresAt: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: "expires_at",
     },
   },
   {

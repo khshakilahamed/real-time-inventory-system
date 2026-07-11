@@ -1,8 +1,12 @@
+import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import errorHandler from "./middlewares/errorHandler.js";
+import sequelize from "./sequelize/index.js";
+import router from './routes/index.js';
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 app.use(
@@ -12,9 +16,37 @@ app.use(
   }),
 );
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+
+async function start() {
+  try {
+    await sequelize.authenticate();
+    console.log("✓ Database connected");
+    // alter:true adds missing columns to existing tables without dropping data
+    await sequelize.sync({ alter: true });
+    console.log("✓ Tables synced");
+
+    app.listen(PORT, () => {
+      console.log(`✓ Server running on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
+}
+
+start();
+
+app.get("/api/health", (req, res) =>
+  res.status(200).json({
+    success: true,
+    message: "ok",
+    errorMessage: [],
+  }),
+);
+
+app.use('/api', router);
+
+
 
 // Global error handler
 app.use(errorHandler);

@@ -3,9 +3,10 @@ import bcrypt from "bcryptjs";
 import sequelize from "../sequelize/index.js";
 import { UserModel } from "./User.js";
 import { DropModel } from "./Drop.js";
+import { ReservationModel } from "./Reservation.js";
 
-export const ReservationModel = sequelize.define(
-  "Reservation",
+export const PurchaseModel = sequelize.define(
+  "Purchase",
   {
     id: {
       type: DataTypes.STRING(100),
@@ -23,19 +24,20 @@ export const ReservationModel = sequelize.define(
       allowNull: false,
       field: "drop_id",
     },
-    status: {
-      type: DataTypes.ENUM("pending", "completed", "cancelled", "expired"),
+    reservationId: {
+      type: DataTypes.STRING(100),
       allowNull: false,
-      defaultValue: "pending",
+      unique: true,
+      field: "reservation_id",
     },
-    expiresAt: {
-      type: DataTypes.DATE,
+    amountPaid: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      field: "expires_at",
+      field: "amount_paid",
     },
   },
   {
-    tableName: "reservations",
+    tableName: "purchases",
     underscored: true,
     timestamps: true,
     createdAt: "created_at",
@@ -43,30 +45,44 @@ export const ReservationModel = sequelize.define(
   },
 );
 
-UserModel.hasMany(ReservationModel, {
+UserModel.hasMany(PurchaseModel, {
   foreignKey: "userId",
   sourceKey: "id",
-  as: "reservations",
+  as: "purchases",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
 
-ReservationModel.belongsTo(UserModel, {
+PurchaseModel.belongsTo(UserModel, {
   foreignKey: "userId",
   targetKey: "id",
   as: "user",
 });
 
-DropModel.hasMany(ReservationModel, {
+DropModel.hasMany(PurchaseModel, {
   foreignKey: "dropId",
   sourceKey: "id",
-  as: "reservations",
+  as: "purchases",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
 
-ReservationModel.belongsTo(DropModel, {
+PurchaseModel.belongsTo(DropModel, {
   foreignKey: "dropId",
   targetKey: "id",
   as: "drop",
+});
+
+ReservationModel.hasOne(PurchaseModel, {
+  foreignKey: "reservationId",
+  sourceKey: "id",
+  as: "purchase",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+PurchaseModel.belongsTo(ReservationModel, {
+  foreignKey: "reservationId",
+  targetKey: "id",
+  as: "reservation",
 });

@@ -1,6 +1,6 @@
 import ApiError from "../../errors/ApiError.js";
 import httpStatus from "http-status";
-import { DropModel } from "../../models/index.js";
+import { DropModel, PurchaseModel, UserModel } from "../../models/index.js";
 import { ReservationModel } from "../../models/Reservation.js";
 import sequelize from "../../sequelize/index.js";
 
@@ -23,11 +23,44 @@ export const createNewMerchDropService = async (merchDropData) => {
 export const getDropsService = async () => {
   const drops = await DropModel.findAll({ order: [["created_at", "DESC"]] });
 
-  return drops;
+  const result = await Promise.all(
+    drops.map(async (drop) => {
+      const purchases = await PurchaseModel.findAll({
+        where: { drop_id: drop.id },
+        include: [
+          {
+            model: UserModel,
+            as: "user",
+            attributes: ["firstName", "lastName"],
+          },
+        ],
+        order: [["created_at", "DESC"]],
+        limit: 3,
+      });
+
+      return {
+        id: drop.id,
+        name: drop.name,
+        price: drop.price,
+        totalStock: drop.totalStock,
+        availableStock: drop.availableStock,
+        startsAt: drop.startsAt,
+        imageUrl: drop.imageUrl ?? null,
+        created_at: drop.created_at,
+        recentPurchasers: purchases.map((p) => ({
+          firstName: p.user.firstName,
+          lastName: p.user.lastName,
+          purchasedAt: p.created_at,
+        })),
+      };
+    }),
+  );
+
+  return result;
 };
 
 // atomic reservation
-export const reservationService = async (userId, dropId) => {
+export const reservationService = async (req, userId, dropId) => {
   const EXPIRY_SECONDS = 60;
 
   const transaction = await sequelize.transaction();
@@ -80,6 +113,14 @@ export const reservationService = async (userId, dropId) => {
     );
 
     await transaction.commit();
+
+    req.app
+      .get("io")
+      .to(`drop:${dropId}`)
+      .emit("stock:update", {
+        dropId,
+        availableStock: parseInt(updatedDrop.available_stock),
+      });
 
     return {
       reservationId: reservation.id,

@@ -9,9 +9,8 @@ import {
 import sequelize from "../../sequelize/index.js";
 
 export const getAllReservationService = async (status) => {
-  console.log("status: ", status);
   const reservations = await ReservationModel.findAll({
-        where: status ? { status } : {},
+    where: status ? { status } : {},
     include: [
       {
         model: UserModel,
@@ -27,12 +26,10 @@ export const getAllReservationService = async (status) => {
     order: [["created_at", "DESC"]],
   });
 
-  console.log("reservations: ", reservations);
-
   return reservations;
 };
 
-export const deleteReservationService = async (userId, reservationId) => {
+export const deleteReservationService = async (req, userId, reservationId) => {
   const transaction = await sequelize.transaction();
   try {
     const reservation = await ReservationModel.findOne({
@@ -57,13 +54,19 @@ export const deleteReservationService = async (userId, reservationId) => {
     );
 
     await transaction.commit();
+
+    const drop = await DropModel.findByPk(reservation.dropId);
+    req.app.get("io").to(`drop:${reservation.dropId}`).emit("stock:update", {
+      dropId: reservation.dropId,
+      availableStock: drop.availableStock,
+    });
   } catch (err) {
     await transaction.rollback();
     throw err;
   }
 };
 
-export const purchaseReservationService = async (userId, reservationId) => {
+export const purchaseReservationService = async (req, userId, reservationId) => {
   const transaction = await sequelize.transaction();
   try {
     const reservation = await ReservationModel.findOne({
@@ -97,6 +100,17 @@ export const purchaseReservationService = async (userId, reservationId) => {
     );
 
     await transaction.commit();
+
+    // Broadcast new purchase activity to all clients watching this drop
+    req.app
+      .get("io")
+      .to(`drop:${reservation.dropId}`)
+      .emit("purchase:activity", {
+        dropId: reservation.dropId,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        purchasedAt: purchase.created_at,
+      });
 
     return {
       purchaseId: purchase.id,

@@ -25,7 +25,7 @@ export const deleteReservationController = catchAsyncErrors(
   async (req, res) => {
     const reservationId = req.params.id;
     const userId = req.user.id;
-    await deleteReservationService(userId, reservationId);
+    await deleteReservationService(req, userId, reservationId);
 
     return sendResponse(res, {
       success: true,
@@ -39,7 +39,7 @@ export const purchaseReservationController = catchAsyncErrors(
   async (req, res) => {
     const reservationId = req.params.id;
     const userId = req.user.id;
-    const result = await purchaseReservationService(userId, reservationId);
+    const result = await purchaseReservationService(req, userId, reservationId);
 
     return sendResponse(res, {
       success: true,

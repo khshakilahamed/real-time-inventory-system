@@ -4,6 +4,7 @@ import RegisterPage from "./pages/RegisterPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import MainLayout from "./Layouts/MainLayout";
 import DropPage from "./pages/DropPage";
+import { SocketProvider } from "./context/SocketContext";
 
 function GuestRoute({ children }) {
   const { user } = useAuth();
@@ -14,33 +15,35 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <GuestRoute>
-                <LoginPage />
-              </GuestRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <GuestRoute>
-                <RegisterPage />
-              </GuestRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <MainLayout>
-                <DropPage />
-              </MainLayout>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <SocketProvider>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <GuestRoute>
+                  <LoginPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <GuestRoute>
+                  <RegisterPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/"
+              element={
+                <MainLayout>
+                  <DropPage />
+                </MainLayout>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

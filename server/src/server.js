@@ -1,21 +1,27 @@
-import 'dotenv/config';
-import express from "express";
-import cors from "cors";
-import errorHandler from "./middlewares/errorHandler.js";
+import "dotenv/config";
+import http from "http";
+import { Server } from "socket.io";
+import app from "./app.js";
 import sequelize from "./sequelize/index.js";
-import router from './routes/index.js';
+import { initSocket } from "./socket/index.js";
+import { startExpiryJob } from "./services/reservationExpiryJob.js";
 
-const app = express();
-app.use(express.json());
 const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
 
-app.use(
-  cors({
+const io = new Server(server, {
+  cors: {
     origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-    credentials: true,
-  }),
-);
+    methods: ["GET", "POST"],
+  },
+});
 
+console.log("✓ Socket.io server created");
+
+// Make io available in Express route handlers via req.app.get('io')
+app.set("io", io);
+
+initSocket(io);
 
 async function start() {
   try {
@@ -25,7 +31,8 @@ async function start() {
     await sequelize.sync({ alter: true });
     console.log("✓ Tables synced");
 
-    app.listen(PORT, () => {
+    startExpiryJob(io);
+    server.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);
     });
   } catch (err) {
@@ -35,34 +42,3 @@ async function start() {
 }
 
 start();
-
-app.get("/api/health", (req, res) =>
-  res.status(200).json({
-    success: true,
-    message: "ok",
-    errorMessage: [],
-  }),
-);
-
-app.use('/api', router);
-
-
-
-// Global error handler
-app.use(errorHandler);
-
-// handle not found route
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: "Not Found",
-    errorMessage: [
-      {
-        path: req.originalUrl,
-        message: "API Not Found",
-      },
-    ],
-  });
-
-  next();
-});

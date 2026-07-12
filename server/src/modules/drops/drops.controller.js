@@ -31,7 +31,7 @@ export const getDropsController = catchAsyncErrors(async (req, res) => {
 export const reservationController = catchAsyncErrors(async (req, res) => {
   const dropId = req.params.dropId;
   const userId = req.user.id;
-  const result = await reservationService(userId, dropId);
+  const result = await reservationService(req, userId, dropId);
 
   return sendResponse(res, {
     success: true,

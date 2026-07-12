@@ -1,6 +1,12 @@
 import { useState } from "react";
 import StockBadge from "./StockBadge";
 import { useAuth } from "../context/AuthContext";
+import useReservation from "../hooks/useReservation";
+import useDropSocket from "../hooks/useDropSocket";
+import DropCountdown from "./DropCountdown";
+import ReservationTimer from "./ReservationTimer";
+import ActivityFeed from "./ActivityFeed";
+import { useNavigate } from "react-router-dom";
 
 function DropImage({ imageUrl, name }) {
   const [errored, setErrored] = useState(false);
@@ -34,33 +40,80 @@ function DropImage({ imageUrl, name }) {
 
 const DropCard = ({ drop, addToast }) => {
   const { user } = useAuth();
+  const { availableStock, recentActivity } = useDropSocket(
+    drop.id,
+    drop.availableStock,
+  );
+  const { reservation, loading, reserve, purchase, cancel, clearReservation } =
+    useReservation(drop.id);
+    const navigate = useNavigate();
+
+  const handleReserve = async () => {
+    if (!user) {
+      navigate('/login')
+      return;
+    }
+    try {
+      await reserve();
+      addToast({
+        message: "Item reserved! You have 60 seconds to purchase.",
+        type: "success",
+      });
+    } catch (err) {
+      const { data } = err.response;
+      addToast({
+        message: data.message ?? "Failed to reserve. Please try again.",
+        type: "error",
+      });
+    }
+  };
+
+  const handlePurchase = async () => {
+    try {
+      await purchase();
+      addToast({ message: "Purchase complete! Congrats!", type: "success" });
+    } catch (err) {
+      const { data } = err.response;
+      addToast({
+        message: data.message ?? "Purchase failed. Please try again.",
+        type: "error",
+      });
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await cancel();
+      addToast({ message: "Reservation cancelled.", type: "success" });
+    } catch (err) {
+      const { data } = err.response;
+      addToast({
+        message: data.message ?? "Could not cancel reservation.",
+        type: "error",
+      });
+    }
+  };
+
+  const handleExpire = () => {
+    clearReservation();
+    addToast({ message: "Your reservation expired.", type: "error" });
+  };
 
   const [isStarted, setIsStarted] = useState(
     () => new Date(drop.startsAt) <= new Date(),
   );
 
-  const handleReserve = async () => {
-    addToast({
-      message: "Item reserved! You have 60 seconds to purchase.",
-      type: "success",
-    });
-    addToast({
-      message: "Item reserved! You have 60 seconds to purchase.",
-      type: "error",
-    });
-  };
-
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col relative">
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
       <DropImage imageUrl={drop.imageUrl} name={drop.name} />
 
-      <div className="p-5 flex flex-col gap-4">
+      <div className="p-5 flex flex-col gap-4 h-full flex-1">
         {/* Header */}
         <div className="flex justify-between items-start gap-2">
           <h2 className="text-base font-semibold text-gray-900 leading-tight">
             {drop.name}
           </h2>
-          <StockBadge availableStock={drop.availableStock} />
+          <StockBadge availableStock={availableStock} />
         </div>
 
         {/* Price */}
@@ -68,9 +121,105 @@ const DropCard = ({ drop, addToast }) => {
           ${parseFloat(drop.price).toFixed(2)}
         </p>
 
-        <button onClick={handleReserve} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-xl transition-colors">
-          Reserve
-        </button>
+        {/* Countdown until drop goes live */}
+        {!isStarted && (
+          <DropCountdown
+            startsAt={drop.startsAt}
+            onStart={() => setIsStarted(true)}
+          />
+        )}
+
+        {/* Activity feed */}
+        <ActivityFeed
+          initialPurchasers={drop.recentPurchasers}
+          liveActivity={recentActivity}
+        />
+
+        {/* Reservation zone */}
+        {reservation ? (
+          <div className="space-y-2 mt-auto">
+            <ReservationTimer
+              expiresAt={reservation.expiresAt}
+              onExpire={handleExpire}
+            />
+            <button
+              onClick={handlePurchase}
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl transition-colors"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                "Complete Purchase"
+              )}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              className="w-full text-sm text-gray-400 hover:text-red-500 transition-colors py-1"
+            >
+              Cancel reservation
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleReserve}
+            disabled={loading || availableStock === 0 || !isStarted}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-xl transition-colors mt-auto"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg
+                  className="animate-spin w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"
+                  />
+                </svg>
+                Reserving...
+              </span>
+            ) : availableStock === 0 ? (
+              "Sold Out"
+            ) : !isStarted ? (
+              "Not Started"
+            ) : (
+              "Reserve"
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

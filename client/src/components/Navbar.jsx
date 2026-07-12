@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { connected } = useSocket();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -20,6 +22,10 @@ export default function Navbar() {
           >
             SneakerDrop
           </Link>
+          <span
+            title={connected ? "Live" : "Disconnected"}
+            className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400" : "bg-gray-300"}`}
+          />
         </div>
 
         <div className="flex items-center gap-4">

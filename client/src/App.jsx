@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import MainLayout from "./Layouts/MainLayout";
+import DropPage from "./pages/DropPage";
 
 function GuestRoute({ children }) {
   const { user } = useAuth();
@@ -31,7 +33,11 @@ function App() {
           />
           <Route
             path="/"
-            element={<h3>Real time inventory by Kh. Shakil</h3>}
+            element={
+              <MainLayout>
+                <DropPage />
+              </MainLayout>
+            }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

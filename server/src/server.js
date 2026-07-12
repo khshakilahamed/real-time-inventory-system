@@ -27,9 +27,13 @@ async function start() {
   try {
     await sequelize.authenticate();
     console.log("✓ Database connected");
-    // alter:true adds missing columns to existing tables without dropping data
-    await sequelize.sync({ alter: true });
-    console.log("✓ Tables synced");
+
+    if (process.env.DB_SYNC === "true") {
+      await sequelize.sync({ alter: true });
+      console.log("✓ Tables synced");
+    } else {
+      console.log("✓ Skipping table sync (DB_SYNC not set to true)");
+    }
 
     startExpiryJob(io);
     server.listen(PORT, () => {

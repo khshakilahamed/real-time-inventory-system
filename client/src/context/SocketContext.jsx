@@ -10,8 +10,8 @@ export function SocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    // Connect via Vite proxy: /socket.io -> http://localhost:3000/socket.io
-    const s = io("/", { autoConnect: true });
+    // Dev: relative "/" goes through the Vite proxy. Prod: VITE_API_BASE_URL points straight at the server.
+    const s = io(import.meta.env.VITE_API_BASE_URL || "/", { autoConnect: true });
     setSocket(s);
 
     s.on("connect", () => setConnected(true));

@@ -29,6 +29,9 @@ A full-stack inventory system built for high-concurrency "sneaker drop" scenario
 ```bash
 # Create the database
 psql -U postgres -c "CREATE DATABASE inventory_db;"
+
+# Run the schema
+psql -U postgres -d inventory_db -f server/schema.sql
 ```
 
 ### 3. Configure the Server
